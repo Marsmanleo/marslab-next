@@ -2,8 +2,17 @@ import Link from "next/link";
 import styles from "@/styles/IndustrialSolutions.module.css";
 
 export default function SolutionCard({ solution }) {
-  const { id, title, category, shortDescription, author, date, imageUrl } =
-    solution;
+  // 適配 API 返回的不同數據格式
+  // API返回格式: { id, title, description, category, author_name, created_at, ... }
+  // 模擬數據格式: { id, title, shortDescription, category, author, date, imageUrl }
+
+  const id = solution.id;
+  const title = solution.title;
+  const category = solution.category;
+  const shortDescription = solution.description || solution.shortDescription;
+  const author = solution.author_name || solution.author;
+  const date = solution.created_at || solution.date;
+  const imageUrl = solution.image_url || solution.imageUrl;
 
   return (
     <div className={styles.card}>

@@ -73,19 +73,43 @@ export default function SubmitSolution() {
         formDataToSend.append(`images[${index}]`, image);
       });
 
-      // 嘗試實際 API 調用
+      // 嘗試使用 JSON 格式提交數據
       let apiSuccess = false;
+      let jsonData = {
+        title: formData.title,
+        description: formData.shortDescription,
+        content: formData.detailedDescription,
+        problem: formData.problemStatement,
+        technical_parameters: formData.technicalParameters,
+        video_url: formData.videoUrl,
+        category: formData.category,
+        author_name: formData.authorName,
+        author_email: formData.authorEmail,
+        author_company: formData.authorCompany,
+        author_phone: formData.authorPhone,
+      };
+
       try {
-        const response = await fetch("/api/industrial-solutions", {
+        // 使用修正後的 API 路徑
+        const response = await fetch("/api/industrial-solutions.php", {
           method: "POST",
-          body: formDataToSend,
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(jsonData),
         });
 
         if (response.ok) {
           apiSuccess = true;
-          console.log("解決方案已成功提交到 API");
+          const responseData = await response.json();
+          console.log("解決方案已成功提交到 API，響應:", responseData);
+
+          // 設置標記，告訴列表頁面需要刷新數據
+          localStorage.setItem("refreshSolutions", "true");
         } else {
           console.log("API 響應錯誤:", response.status);
+          const errorData = await response.text();
+          console.log("錯誤詳情:", errorData);
         }
       } catch (apiError) {
         console.log("API 調用失敗，使用模擬模式:", apiError);
@@ -96,6 +120,8 @@ export default function SubmitSolution() {
         console.log("使用模擬提交模式");
         // 模擬網絡延遲
         await new Promise((resolve) => setTimeout(resolve, 1500));
+        // 即使使用模擬模式也設置刷新標記
+        localStorage.setItem("refreshSolutions", "true");
       }
 
       // 無論是 API 成功還是模擬成功，都顯示成功訊息

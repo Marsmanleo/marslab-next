@@ -14,83 +14,107 @@ export default function IndustrialSolutions() {
     searchQuery: "",
   });
 
-  useEffect(() => {
-    async function fetchSolutions() {
+  async function fetchSolutions() {
+    try {
+      setLoading(true);
+      // 嘗試從 API 獲取數據
       try {
-        setLoading(true);
-        // 嘗試從 API 獲取數據
-        try {
-          const res = await fetch(
-            `/api/industrial-solutions?category=${filters.category}&search=${filters.searchQuery}`
-          );
+        // 修正 API 路徑
+        const res = await fetch(
+          `/api/industrial-solutions.php?category=${filters.category}&search=${filters.searchQuery}`
+        );
 
-          if (res.ok) {
-            const data = await res.json();
-            setSolutions(data);
-            setLoading(false);
-            return; // 如果 API 成功，提前返回
+        if (res.ok) {
+          const data = await res.json();
+          console.log("API 返回數據:", data);
+          // 確保我們處理的是正確的數據結構
+          if (data && data.success && data.data) {
+            setSolutions(data.data);
+          } else {
+            setSolutions(data); // 兼容舊格式
           }
-        } catch (apiError) {
-          console.log("API 尚未就緒，使用模擬數據", apiError);
+          setLoading(false);
+          return; // 如果 API 成功，提前返回
+        } else {
+          console.log("API 響應錯誤:", res.status);
+          const errorText = await res.text();
+          console.log("錯誤詳情:", errorText);
         }
-
-        // 如果 API 不可用，使用模擬數據
-        const demoData = [
-          {
-            id: 1,
-            title: "智能工廠生產線自動化解決方案",
-            category: "自動化",
-            shortDescription: "通過AI和物聯網技術提高生產效率和產品質量",
-            imageUrl: "/images/solution1.jpg",
-            author: "張工程師",
-            date: "2025-03-10",
-          },
-          {
-            id: 2,
-            title: "工業廢水處理智能監控系統",
-            category: "環保科技",
-            shortDescription: "實時監控和優化工業廢水處理過程，降低環境影響",
-            imageUrl: "/images/solution2.jpg",
-            author: "李環保",
-            date: "2025-03-05",
-          },
-          {
-            id: 3,
-            title: "工業設備預測性維護系統",
-            category: "設備維護",
-            shortDescription: "利用機器學習預測設備故障，減少停機時間",
-            imageUrl: "/images/solution3.jpg",
-            author: "王維護",
-            date: "2025-02-28",
-          },
-        ];
-
-        // 根據篩選條件過濾模擬數據
-        let filteredData = [...demoData];
-
-        if (filters.category !== "all") {
-          filteredData = filteredData.filter(
-            (item) => item.category === filters.category
-          );
-        }
-
-        if (filters.searchQuery) {
-          const query = filters.searchQuery.toLowerCase();
-          filteredData = filteredData.filter(
-            (item) =>
-              item.title.toLowerCase().includes(query) ||
-              item.shortDescription.toLowerCase().includes(query)
-          );
-        }
-
-        setSolutions(filteredData);
-        setLoading(false);
-      } catch (err) {
-        setError(err.message);
-        setLoading(false);
+      } catch (apiError) {
+        console.log("API 尚未就緒，使用模擬數據", apiError);
       }
+
+      // 如果 API 不可用，使用模擬數據
+      const demoData = [
+        {
+          id: 1,
+          title: "智能工廠生產線自動化解決方案",
+          category: "自動化",
+          shortDescription: "通過AI和物聯網技術提高生產效率和產品質量",
+          imageUrl: "/images/solution1.jpg",
+          author: "張工程師",
+          date: "2025-03-10",
+        },
+        {
+          id: 2,
+          title: "工業廢水處理智能監控系統",
+          category: "環保科技",
+          shortDescription: "實時監控和優化工業廢水處理過程，降低環境影響",
+          imageUrl: "/images/solution2.jpg",
+          author: "李環保",
+          date: "2025-03-05",
+        },
+        {
+          id: 3,
+          title: "工業設備預測性維護系統",
+          category: "設備維護",
+          shortDescription: "利用機器學習預測設備故障，減少停機時間",
+          imageUrl: "/images/solution3.jpg",
+          author: "王維護",
+          date: "2025-02-28",
+        },
+      ];
+
+      // 根據篩選條件過濾模擬數據
+      let filteredData = [...demoData];
+
+      if (filters.category !== "all") {
+        filteredData = filteredData.filter(
+          (item) => item.category === filters.category
+        );
+      }
+
+      if (filters.searchQuery) {
+        const query = filters.searchQuery.toLowerCase();
+        filteredData = filteredData.filter(
+          (item) =>
+            item.title.toLowerCase().includes(query) ||
+            item.shortDescription.toLowerCase().includes(query)
+        );
+      }
+
+      setSolutions(filteredData);
+      setLoading(false);
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
+  }
+
+  // 頁面加載時
+  useEffect(() => {
+    // 檢查是否需要強制刷新數據
+    const needRefresh = localStorage.getItem("refreshSolutions") === "true";
+    if (needRefresh) {
+      console.log("檢測到新提交的數據，正在刷新列表...");
+      localStorage.removeItem("refreshSolutions");
     }
 
+    fetchSolutions();
+  }, []);
+
+  // 過濾器變更時
+  useEffect(() => {
     fetchSolutions();
   }, [filters]);
 

@@ -131,23 +131,63 @@ export default function SolutionDetail() {
     // 如果id還未加載，不執行任何操作
     if (!id) return;
 
-    // 模擬從API獲取數據
     const fetchSolution = async () => {
       try {
-        // 實際應用中的API調用
-        // const res = await fetch(`/api/industrial-solutions/${id}`);
-        // if (!res.ok) throw new Error('無法找到該解決方案');
-        // const data = await res.json();
+        // 嘗試從 API 獲取數據
+        let apiSuccess = false;
+        try {
+          // 使用修正後的 API 路徑
+          const res = await fetch(`/api/industrial-solutions.php/${id}`);
 
-        // 使用模擬數據
-        const foundSolution = demoSolutions.find((s) => s.id === id);
-        if (!foundSolution) throw new Error("無法找到該解決方案");
+          if (res.ok) {
+            const responseData = await res.json();
+            console.log("API 返回詳情數據:", responseData);
 
-        // 模擬網絡延遲
-        await new Promise((resolve) => setTimeout(resolve, 500));
+            if (responseData && responseData.success && responseData.data) {
+              // 處理 API 返回的數據格式
+              const apiSolution = responseData.data;
 
-        setSolution(foundSolution);
-        setLoading(false);
+              // 將 API 數據映射到頁面所需格式
+              const formattedSolution = {
+                id: apiSolution.id,
+                title: apiSolution.title,
+                category: apiSolution.category,
+                shortDescription: apiSolution.description,
+                detailedDescription: apiSolution.content || "",
+                problemStatement: apiSolution.problem || "",
+                technicalParameters: apiSolution.technical_parameters || "",
+                videoUrl: apiSolution.video_url,
+                author: apiSolution.contact_info?.name || "",
+                authorCompany: apiSolution.contact_info?.company || "",
+                contactEmail: apiSolution.contact_info?.email || "",
+                date: apiSolution.created_at,
+                images: [], // API 可能不返回圖片，暫時使用空數組
+              };
+
+              setSolution(formattedSolution);
+              setLoading(false);
+              apiSuccess = true;
+            }
+          } else {
+            console.log("API 響應錯誤:", res.status);
+          }
+        } catch (apiError) {
+          console.log("API 調用失敗，使用模擬數據:", apiError);
+        }
+
+        // 如果 API 獲取失敗，使用模擬數據
+        if (!apiSuccess) {
+          console.log("使用模擬數據");
+          // 使用模擬數據
+          const foundSolution = demoSolutions.find((s) => s.id === id);
+          if (!foundSolution) throw new Error("無法找到該解決方案");
+
+          // 模擬網絡延遲
+          await new Promise((resolve) => setTimeout(resolve, 500));
+
+          setSolution(foundSolution);
+          setLoading(false);
+        }
       } catch (err) {
         setError(err.message);
         setLoading(false);
@@ -220,9 +260,11 @@ export default function SolutionDetail() {
                   <strong>組織:</strong> {solution.authorCompany}
                 </p>
               )}
-              <p>
-                <strong>聯繫方式:</strong> {solution.contactEmail}
-              </p>
+              {solution.contactEmail && (
+                <p>
+                  <strong>聯繫方式:</strong> {solution.contactEmail}
+                </p>
+              )}
             </div>
 
             <div className={styles.sidebarSection}>
@@ -231,14 +273,16 @@ export default function SolutionDetail() {
             </div>
 
             <div className={styles.sidebarActions}>
-              <button
-                className={styles.contactButton}
-                onClick={() =>
-                  (window.location.href = `mailto:${solution.contactEmail}?subject=關於「${solution.title}」的諮詢`)
-                }
-              >
-                聯繫提供者
-              </button>
+              {solution.contactEmail && (
+                <button
+                  className={styles.contactButton}
+                  onClick={() =>
+                    (window.location.href = `mailto:${solution.contactEmail}?subject=關於「${solution.title}」的諮詢`)
+                  }
+                >
+                  聯繫提供者
+                </button>
+              )}
               <Link
                 href="/industrial-solutions/submit"
                 className={styles.submitOwnButton}
@@ -282,27 +326,31 @@ export default function SolutionDetail() {
               </div>
             )}
 
-            <div className={styles.problemSection}>
-              <h2>解決的問題</h2>
-              <div className={styles.formattedText}>
-                {solution.problemStatement
-                  .split("\n")
-                  .map((paragraph, index) => (
-                    <p key={index}>{paragraph}</p>
-                  ))}
+            {solution.problemStatement && (
+              <div className={styles.problemSection}>
+                <h2>解決的問題</h2>
+                <div className={styles.formattedText}>
+                  {solution.problemStatement
+                    .split("\n")
+                    .map((paragraph, index) => (
+                      <p key={index}>{paragraph}</p>
+                    ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className={styles.descriptionSection}>
-              <h2>詳細描述</h2>
-              <div className={styles.formattedText}>
-                {solution.detailedDescription
-                  .split("\n")
-                  .map((paragraph, index) => (
-                    <p key={index}>{paragraph}</p>
-                  ))}
+            {solution.detailedDescription && (
+              <div className={styles.descriptionSection}>
+                <h2>詳細描述</h2>
+                <div className={styles.formattedText}>
+                  {solution.detailedDescription
+                    .split("\n")
+                    .map((paragraph, index) => (
+                      <p key={index}>{paragraph}</p>
+                    ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {solution.technicalParameters && (
               <div className={styles.parametersSection}>
