@@ -14,37 +14,90 @@ export default function IndustrialSolutions() {
     searchQuery: "",
   });
 
+  const [apiStatus, setApiStatus] = useState({
+    attempted: false,
+    success: false,
+    endpoint: "",
+    error: null,
+  });
+
   async function fetchSolutions() {
     try {
       setLoading(true);
+
+      // 默認API端點
+      let apiEndpoint = "/api/industrial-solutions.php";
+
+      // 嘗試從環境變量獲取API端點
+      if (process.env.NEXT_PUBLIC_API_ENDPOINT) {
+        apiEndpoint = process.env.NEXT_PUBLIC_API_ENDPOINT;
+      }
+
       // 嘗試從 API 獲取數據
       try {
-        // 修正 API 路徑
-        const res = await fetch(
-          `/api/industrial-solutions.php?category=${filters.category}&search=${filters.searchQuery}`
-        );
+        console.log("正在請求API數據...");
+        const apiUrl = `${apiEndpoint}?category=${filters.category}&search=${filters.searchQuery}`;
+        console.log("API URL:", apiUrl);
+
+        setApiStatus((prev) => ({
+          ...prev,
+          attempted: true,
+          endpoint: apiUrl,
+        }));
+
+        const res = await fetch(apiUrl);
+        console.log("API響應狀態:", res.status);
 
         if (res.ok) {
           const data = await res.json();
-          console.log("API 返回數據:", data);
+          console.log("API 完整返回數據:", data);
+
+          setApiStatus((prev) => ({ ...prev, success: true, error: null }));
+
           // 確保我們處理的是正確的數據結構
           if (data && data.success && data.data) {
+            console.log("使用data.data結構:", data.data);
             setSolutions(data.data);
           } else {
+            console.log("使用舊數據格式:", data);
             setSolutions(data); // 兼容舊格式
           }
+          console.log(
+            "處理後的解決方案數據:",
+            Array.isArray(data.data ? data.data : data)
+              ? data.data
+                ? data.data
+                : data
+              : "非數組數據"
+          );
           setLoading(false);
+
+          // 添加前端調試信息
+          document.title = `工業科技解決方案 (${data.data ? data.data.length : 0})`;
+
           return; // 如果 API 成功，提前返回
         } else {
           console.log("API 響應錯誤:", res.status);
           const errorText = await res.text();
           console.log("錯誤詳情:", errorText);
+
+          setApiStatus((prev) => ({
+            ...prev,
+            success: false,
+            error: `API返回錯誤: ${res.status}, ${errorText}`,
+          }));
         }
       } catch (apiError) {
-        console.log("API 尚未就緒，使用模擬數據", apiError);
+        console.log("API 調用異常:", apiError);
+        setApiStatus((prev) => ({
+          ...prev,
+          success: false,
+          error: `API調用異常: ${apiError.message}`,
+        }));
       }
 
       // 如果 API 不可用，使用模擬數據
+      console.log("回退到模擬數據");
       const demoData = [
         {
           id: 1,
@@ -93,9 +146,11 @@ export default function IndustrialSolutions() {
         );
       }
 
+      console.log("使用的模擬數據:", filteredData);
       setSolutions(filteredData);
       setLoading(false);
     } catch (err) {
+      console.log("fetchSolutions總體錯誤:", err);
       setError(err.message);
       setLoading(false);
     }
@@ -123,6 +178,12 @@ export default function IndustrialSolutions() {
     setFilters({ ...filters, ...newFilters });
   };
 
+  // 手動刷新數據
+  const handleRefresh = () => {
+    console.log("手動刷新數據");
+    fetchSolutions();
+  };
+
   return (
     <div className={styles.container}>
       <Head>
@@ -139,12 +200,17 @@ export default function IndustrialSolutions() {
           <p className={styles.description}>
             探索由工程專家設計的前沿工業科技解決方案，助力企業數字化轉型和技術升級
           </p>
-          <Link
-            href="/industrial-solutions/submit"
-            className={styles.submitButton}
-          >
-            提交您的方案
-          </Link>
+          <div className={styles.actions}>
+            <Link
+              href="/industrial-solutions/submit"
+              className={styles.submitButton}
+            >
+              提交您的方案
+            </Link>
+            <button onClick={handleRefresh} className={styles.refreshButton}>
+              刷新數據
+            </button>
+          </div>
         </div>
 
         <FilterBar
@@ -157,15 +223,49 @@ export default function IndustrialSolutions() {
         ) : error ? (
           <div className={styles.error}>{error}</div>
         ) : (
-          <div className={styles.grid}>
-            {solutions.length > 0 ? (
-              solutions.map((solution) => (
-                <SolutionCard key={solution.id} solution={solution} />
-              ))
-            ) : (
-              <div className={styles.noResults}>未找到匹配的解決方案</div>
+          <>
+            <div className={styles.grid}>
+              {solutions.length > 0 ? (
+                solutions.map((solution) => (
+                  <SolutionCard key={solution.id} solution={solution} />
+                ))
+              ) : (
+                <div className={styles.noResults}>
+                  未找到匹配的解決方案
+                  <div className={styles.debugInfo}>
+                    <small>調試信息：嘗試檢查控制台輸出</small>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* API 狀態信息 */}
+            {apiStatus.attempted && (
+              <details className={`${styles.debugDetails} ${styles.apiStatus}`}>
+                <summary>API 狀態信息</summary>
+                <div className={styles.debugInfo}>
+                  <p>
+                    <strong>端點:</strong> {apiStatus.endpoint}
+                  </p>
+                  <p>
+                    <strong>狀態:</strong> {apiStatus.success ? "成功" : "失敗"}
+                  </p>
+                  {apiStatus.error && (
+                    <p>
+                      <strong>錯誤:</strong> {apiStatus.error}
+                    </p>
+                  )}
+                  <p>
+                    <strong>數據源:</strong>{" "}
+                    {apiStatus.success ? "API數據" : "模擬數據"}
+                  </p>
+                  <p>
+                    <strong>解決方案數量:</strong> {solutions.length}
+                  </p>
+                </div>
+              </details>
             )}
-          </div>
+          </>
         )}
       </main>
     </div>
