@@ -1,14 +1,107 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+// Shared tables with Laravel
+model member_user {
+  id            BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at    DateTime?  @db.Timestamp(0)
+  updated_at    DateTime?  @db.Timestamp(0)
+  username      String?    @db.VarChar(50)
+  phone         String?    @db.VarChar(20)
+  email         String     @db.VarChar(200)
+  password      String     @db.Char(32)
+  passwordSalt  String     @db.Char(16)
+  lastLoginTime DateTime?  @db.Timestamp(0)
+  lastLoginIp   String?    @db.VarChar(20)
+  phoneVerified Int?       @db.TinyInt
+  emailVerified Int?       @db.TinyInt
+  avatar        String?    @db.VarChar(100)
+  avatarMedium  String?    @db.VarChar(100)
+  avatarBig     String?    @db.VarChar(100)
+  gender        Int?       @db.TinyInt
+  realname      String?    @db.VarChar(20)
+  signature     String?    @db.VarChar(200)
+  vipId         Int?
+  vipExpire     DateTime?  @db.Date
+  nickname      String?    @db.VarChar(50)
+  status        Int        @default(1) @db.TinyInt
+  groupId       Int?
+  deleteAtTime  BigInt?
+  isDeleted     Int?       @db.TinyInt
+  messageCount  Int?
+  registerIp    String?    @db.VarChar(20)
+  role          String?    @db.VarChar(50)
+  experiments   nextjs_experiments[]
+  cms_contents  cms_content[]
+
+  @@index([username])
+  @@index([phone])
+  @@index([email])
+  @@index([nickname])
+  @@index([deleteAtTime])
+}
+
+// Next.js specific tables
+model nextjs_experiments {
+  id          BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  title       String?     @db.VarChar(200)
+  summary     String?     @db.VarChar(200)
+  content     String?     @db.Text
+  author_id   BigInt?     @db.UnsignedBigInt
+  status      Status      @default(draft)
+  post_time   DateTime?   @db.DateTime(0)
+  view_count  Int?       @default(0)
+  tags        String?     @db.VarChar(200)
+  created_at  DateTime?   @db.Timestamp(0)
+  updated_at  DateTime?   @db.Timestamp(0)
+  member      member_user? @relation(fields: [author_id], references: [id])
+
+  @@index([author_id])
+  @@index([status])
+  @@index([post_time])
+}
+
+// Laravel CMS tables
+model cms_content {
+  id              BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  catId           Int?        @db.Int
+  title           String?     @db.VarChar(200)
+  alias           String?     @unique @db.VarChar(200)
+  keywords        String?     @db.VarChar(200)
+  desc            String?     @db.VarChar(255)
+  content         String?     @db.Text
+  template        String?     @db.VarChar(50)
+  status          Int?        @db.TinyInt
+  viewCount       Int?        @default(0)
+  created_at      DateTime?   @db.Timestamp(0)
+  updated_at      DateTime?   @db.Timestamp(0)
+  postTime        DateTime?   @db.DateTime(0)
+  author          String?     @db.VarChar(50)
+  source          String?     @db.VarChar(20)
+  memberUserId    BigInt?     @db.UnsignedBigInt
+  verifyStatus    Int?        @db.TinyInt
+  detailTemplate  String?     @db.VarChar(100)
+  coverMo         String?     @db.VarChar(200)
+  banner1         String?     @db.VarChar(255)
+  banner2         String?     @db.VarChar(255)
+  banner3         String?     @db.VarChar(255)
+  brand           String?     @db.VarChar(32)
+  brandImg        String?     @db.VarChar(200)
+  tags            String?     @db.VarChar(200)
+  member          member_user? @relation(fields: [memberUserId], references: [id])
+
+  @@index([postTime])
+  @@index([catId])
+  @@index([memberUserId])
+}
+
+enum Status {
+  draft
+  published
 }
